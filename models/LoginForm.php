@@ -4,10 +4,10 @@ namespace app\models;
 
 use Yii;
 use yii\base\Model;
+use yii\validators\EmailValidator;
+use app\validators\PhoneValidator;
+use app\models\User;
 
-/**
- * LoginForm is the model behind the login form.
- */
 class LoginForm extends Model
 {
     public $username;
@@ -16,28 +16,15 @@ class LoginForm extends Model
 
     private $_user = false;
 
-    /**
-     * @return array the validation rules.
-     */
     public function rules()
     {
         return [
-            // username and password are both required
             [['username', 'password'], 'required'],
-            // rememberMe must be a boolean value
             ['rememberMe', 'boolean'],
-            // password is validated by validatePassword()
             ['password', 'validatePassword'],
         ];
     }
 
-    /**
-     * Validates the password.
-     * This method serves as the inline validation for password.
-     *
-     * @param string $attribute the attribute currently being validated
-     * @param array $params the additional name-value pairs given in the rule
-     */
     public function validatePassword($attribute, $params)
     {
         if (!$this->hasErrors()) {
@@ -56,21 +43,28 @@ class LoginForm extends Model
     public function login()
     {
         if ($this->validate()) {
-            return Yii::$app->user->login($this->getUser(), $this->rememberMe ? 3600*24*30 : 0);
+            return Yii::$app->user->login($this->getUser(), $this->rememberMe ? 3600 * 24 * 30 : 0);
         } else {
             return false;
         }
     }
 
-    /**
-     * Finds user by [[username]]
-     *
-     * @return User|null
-     */
     public function getUser()
     {
         if ($this->_user === false) {
-            $this->_user = User::findByUsername($this->username);
+            $emailValidator = new EmailValidator();
+            $phoneValidator = new PhoneValidator();
+            $key = 'nickname';
+            if ($emailValidator->validate($this->username)) {
+                $key = 'email';
+            }
+            if ($phoneValidator->validate($this->username)) {
+                $key = 'phone_number';
+            }
+            $condition = array();
+            $condition[$key] = $this->username;
+
+            $this->_user = User::findOne($condition);
         }
 
         return $this->_user;
